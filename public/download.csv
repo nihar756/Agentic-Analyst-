@@ -1,0 +1,16 @@
+date,product_name,category,region,units_sold,price,revenue
+2024-01-01,Laptop,Electronics,North,5,50000,250000
+2024-01-02,Phone,Electronics,South,10,20000,200000
+2024-01-03,Tablet,Electronics,East,7,30000,210000
+2024-01-04,Headphones,Accessories,West,15,2000,30000
+2024-01-05,Keyboard,Accessories,North,20,1500,30000
+2024-02-01,Laptop,Electronics,South,3,52000,156000
+2024-02-02,Phone,Electronics,East,8,21000,168000
+2024-02-03,Tablet,Electronics,West,6,31000,186000
+2024-02-04,Headphones,Accessories,North,12,2200,26400
+2024-02-05,Keyboard,Accessories,South,18,1600,28800
+2024-03-01,Laptop,Electronics,East,4,51000,204000
+2024-03-02,Phone,Electronics,West,9,22000,198000
+2024-03-03,Tablet,Electronics,North,5,32000,160000
+2024-03-04,Headphones,Accessories,South,10,2100,21000
+2024-03-05,Keyboard,Accessories,East,22,1700,37400
