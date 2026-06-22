@@ -28,3 +28,7 @@ scikit-learn
 # api integration
 pandas
 fastapi
+
+# Visualization
+matplotlib
+seaborn

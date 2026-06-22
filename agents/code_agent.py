@@ -56,11 +56,31 @@ def validate_query(parsed, schema):
 
 
 
+# def clean_code(text):
+#     text = text.strip()
+#     text = re.sub(r"```python", "", text)
+#     text = re.sub(r"```", "", text)
+#     return text.strip()
 def clean_code(text):
     text = text.strip()
+
     text = re.sub(r"```python", "", text)
     text = re.sub(r"```", "", text)
-    return text.strip()
+    text = re.sub(r"Python", "", text)
+    lines = text.split("\n")
+
+    cleaned = []
+
+    for line in lines:
+        if line.strip().lower().startswith("here is"):
+            continue
+
+        if line.strip().lower().startswith("let me know"):
+            continue
+
+        cleaned.append(line)
+
+    return "\n".join(cleaned).strip()
 
 def code_agent(state):
     llm = get_llm()
@@ -104,6 +124,24 @@ def code_agent(state):
     Generate pandas code only.No explanation needed.
 
     STRICT Rules:
+    - Output ONLY raw Python code.
+    - Do NOT write:
+            - "Here is the Python code:"
+            - explanations
+            - comments
+            - markdown
+            - backticks
+            - any text before or after the code
+            
+    - The dataframe already contains the correct data.
+
+    - Your job is ONLY to generate plotting commands(if needed).
+    - You are NOT responsible for data preparation.
+    - You are NOT allowed to create, modify, aggregate, filter, or load data.
+    - You may only read from df_to_plot and create the visualization(if visualization is needed).
+    - The first character of your response must be valid Python.
+    - The last character of your response must be valid Python.
+    - Any non-Python text will cause execution failure.
     - Generate ONLY ONE valid solution
     - Read the user query and schema carefully
     - Understand the intent of the query and the structure of the data
@@ -130,19 +168,27 @@ def code_agent(state):
     
     AGGREGATION RULE:
     - Use ONLY these formats:
+    - ALWAYS use named aggregation syntax
+    
+    GENERAL FORMAT:
+        result = df.groupby("group_col").agg(
+            new_column_name=("target_column", "aggregation_operation")
+        ).reset_index()
 
-    1. Single aggregation:
-        result = df.groupby("group_col")["target_col"].operation().reset_index()
+        EXAMPLE:
+        result = df.groupby("category").agg(
+            min_price=("price", "min"),
+            max_price=("price", "max")
+        ).reset_index()
 
-    2. OR dictionary format:
-        result = df.groupby("group_col").agg({{"target_col": "operation"}}).reset_index()
 
     INVALID (NEVER DO):
     - df.groupby(df["col"]) ❌
     - eval(...) ❌
     - df['col'].unique() ❌
     - {{col: df[col].max()}} ❌
-
+    - df.groupby(...).agg({{"col": ["min", "max"]}}) ❌
+    
     OUTPUT:
     - Store result in variable `result`
     - Only Python code
@@ -169,18 +215,33 @@ def code_agent(state):
     for col in state["schema"].get("date_columns", []):
         code += f"\ndf['{col}'] = pd.to_datetime(df['{col}'],errors='coerce')"
     
+    # if parsed.get("sort_by"):
+    #     order = parsed.get("order", "asc")
+    #     ascending = (order == "asc")
+    #     code += f"\nresult = result.sort_values(by='{parsed['sort_by']}', ascending={ascending})"
     if parsed.get("sort_by"):
         order = parsed.get("order", "asc")
         ascending = (order == "asc")
-        code += f"\nresult = result.sort_values(by='{parsed['sort_by']}', ascending={ascending})"
-    
+
+        code += f"""
+    if '{parsed['sort_by']}' in result.columns:
+        result = result.sort_values(
+            by='{parsed['sort_by']}',
+            ascending={ascending}
+        )
+    """
     if parsed.get("limit", 0) > 0:
         code += f"\nresult = result.head({parsed['limit']})"
         
     for f in parsed.get("filters",[]):
+        if not f.get("column"):
+            continue
         col = f["column"]
         op = f.get("operator") or f.get("operation")
-        val = f["value"]
+        val = f.get("value")
+        # if op == "=":
+        #     op = "=="
+            
         if col in state["schema"].get("date_columns", []):
             val = f"\ndf['{col}']=pd.to_datetime('{val}', errors='coerce')"
         elif isinstance(val, str):
@@ -203,9 +264,14 @@ def code_agent(state):
         code = ""
 
         for f in parsed["filters"]:
+            if not f.get("column"):
+                continue
             col = f["column"]
             op = f["operator"]
-            val = f["value"]
+            val = f.get("value")
+
+            # if op == "=":
+            #     op = "=="
 
             if isinstance(val, str):
                 val = f"'{val}'"
@@ -216,20 +282,22 @@ def code_agent(state):
     
     
     # multiple aggregations
-    agg_dict = {}
-    for agg in parsed.get("aggregation", []):
-        col = agg["column"]
-        op = agg["operation"]
+    # agg_dict = {}
+    # for agg in parsed.get("aggregation", []):
+    #     col = agg["column"]
+    #     op = agg["operation"]
 
-        if col not in agg_dict:
-            agg_dict[col] = []
-        agg_dict[col].append(op)
+    #     if col not in agg_dict:
+    #         agg_dict[col] = []
+    #     agg_dict[col].append(op)
 
-    if parsed.get("groupby"):
-        group_col = parsed["groupby"][0]
-        code += f"\nresult = df.groupby('{group_col}').agg({agg_dict}).reset_index()"
-    else:
-        code += f"\nresult = df.agg({agg_dict})"
+    # if parsed.get("groupby"):
+    #     group_col = parsed["groupby"][0]
+    #     code += f"\nresult = df.groupby('{group_col}').agg({agg_dict}).reset_index()"
+    # else:
+    #     code += f"\nresult = df.agg({agg_dict})"
+        
+    # code += "\nif isinstance(result.columns, pd.MultiIndex):\n    result.columns = [col[0] for col in result.columns.values]"
     
     if not parsed.get("groupby") and "groupby" in code:
         return {

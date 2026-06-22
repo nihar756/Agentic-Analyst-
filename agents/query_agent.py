@@ -88,7 +88,14 @@ def query_agent(state):
             "operation": "min | max | mean | sum | count"
             }
         ],
-        "visualization": {}
+        "visualization": {
+            "type": "bar | line | scatter | histogram",
+            "x": "column_name",
+            "y": "column_name",
+            "title": "string",
+            "xlabel": "string",
+            "ylabel": "string"
+        }
     }
     """
 
@@ -158,6 +165,10 @@ def query_agent(state):
     - fill nulls with value → "fill_nulls_value"
     - drop duplicates → "drop_duplicates"
     - type conversion → "convert_type"
+    
+    VISUALIZATION RULES:
+    - If query asks for a chart/plot/graph, populate the "visualization" object with the corresponding type, x, y, title, xlabel, ylabel.
+    - Otherwise, leave "visualization" as an empty dictionary {{}}.
     CRITICAL RULE:
     - If query is only filtering (>, <, =, etc.) → aggregation MUST be []
     - NEVER add aggregation unless user explicitly asks (max, min, avg, total)

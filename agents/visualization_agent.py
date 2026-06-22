@@ -61,6 +61,8 @@ def visualization_agent(state):
         cols_description = f"Series index: {list(df_to_plot.index)}"
         sample_dict = df_to_plot.head(5).to_dict()
     
+    chart_path_str = chart_path.replace('\\', '/')
+    
     # Generate prompt to write the plotting code
     prompt = f"""
     Generate Python code using matplotlib and seaborn to create a beautiful chart.
@@ -76,11 +78,13 @@ def visualization_agent(state):
     STRICT RULES:
     1. Generate ONLY executable Python code. No markdown (like ```python or ```), no explanations.
     2. The input dataframe is available as the variable `df_to_plot`. DO NOT redefine or load `df_to_plot` from a file.
-    3. Save the figure to '{chart_path.replace('\\', '/')}' using `plt.savefig('{chart_path.replace('\\', '/')}', bbox_inches='tight', dpi=300)`.
+    3. Save the figure to '{chart_path_str}' using `plt.savefig('{chart_path_str}', bbox_inches='tight', dpi=300)`.
     4. DO NOT call `plt.show()`.
     5. Clean any existing plots before starting with `plt.close('all')`.
     6. Design styling rules to make it look premium:
        - Use a professional style/theme (e.g. `sns.set_theme(style="whitegrid")`).
+       - CRITICAL: Do not blindly use `config['x']` and `config['y']`. You MUST map them to the exact column names present in the `df_to_plot` Columns list (e.g., if config says 'total_revenue' but column is 'revenue', use 'revenue').
+       - If using `df_to_plot.plot(kind=...)`, ensure the kind is valid (e.g., 'bar' instead of 'bar chart'). Alternatively, use seaborn directly (e.g. `sns.barplot(data=df_to_plot, x='actual_x_col', y='actual_y_col')`).
        - Use a curated color palette (like "muted", "viridis", "coolwarm", or professional colors).
        - Rotate x-axis labels if they are categorical or dates and might overlap (e.g., `plt.xticks(rotation=45)`).
        - Add clear title, xlabel, and ylabel.
