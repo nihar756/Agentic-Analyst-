@@ -1,99 +1,75 @@
-1. Data Understanding (INCOMPLETE)
-Missing:
-❌ Missing values detection
-❌ Unique values count
-❌ Dataset summary (rows, cols)
-You only have:
-columns, dtypes, sample
-You SHOULD add:
-df.isnull().sum()
-df.nunique()
-df.shape
-🔴 2. Data Cleaning & Preprocessing (COMPLETELY MISSING)
+# AeroAnalyst AI
 
-Right now:
-👉 Your system cannot modify data
+### LangGraph-Powered Multi-Agent Data Analysis Platform
 
-Missing capabilities:
-❌ Remove nulls
-❌ Fill nulls
-❌ Drop duplicates
-❌ Type conversion
-Example queries your system CANNOT handle:
-"Remove missing values"
-"Fill nulls with mean"
-"Drop duplicate rows"
-🔴 3. EDA / Visualization (COMPLETELY MISSING)
+**AeroAnalyst AI** is an advanced, production-ready data analysis application that orchestrates an autonomous network of AI agents to inspect, query, mutate, and visualize tabular datasets. It features a self-correcting code execution sandbox, stateful snapshot management, and a premium modern user interface.
 
-You detect "visualization" in JSON but:
+![AeroAnalyst AI Workspace](public/app_screenshot.png)
 
-👉 ❌ You never generate charts
+---
 
-Missing:
-❌ Bar charts
-❌ Line charts
-❌ Histogram
-❌ Heatmaps
-🔴 4. Querying (PARTIAL — NEEDS UPGRADE)
+## 🚀 Key Technical Highlights (Resume Showcase)
 
-You support:
+### 1. Multi-Agent Orchestration (LangGraph & LangChain)
+- Architected a **stateful multi-agent system** using **LangGraph** that decomposes natural language user queries into distinct steps executed by specialized agents:
+  - **Schema Parser**: Analyzes data structures, missing values, and column types.
+  - **Query Planner**: Translates ambiguous user queries into structured JSON logic.
+  - **Code Generator**: Generates pandas-based data-wrangling code.
+  - **Sandbox Executor**: Runs generated code safely and returns results.
+  - **Insight Agent**: Distills raw output into human-readable data narratives.
 
-✅ min / max
+### 2. Self-Correcting Code Execution Sandbox
+- Implemented a secure Python `exec()` runtime sandbox for dynamic data mutations.
+- Engineered a **regex-based AST post-processing pipeline** that intercepts common LLM coding syntax errors in real-time (such as incorrect chained indexing, invalid attribute assignments like `.values[0] = ...`, and incorrect date comparisons) to guarantee successful runtime execution.
 
-But missing:
+### 3. Stateful Mutation & Snapshot Persistence
+- Designed a robust FastAPI database schema (PostgreSQL/SQLAlchemy) that tracks conversations and logs query execution history.
+- Built a **stateful snapshot system** that duplicates dataset snapshots upon initiating a conversation, allowing users to safely perform non-destructive mutations (e.g., adding rows, updating cells, dropping duplicates) directly on local CSV files.
 
-❌ top k (top 5 products)
-❌ sorting
-❌ multiple aggregations
-❌ conditional filters
-❌ time-based queries
-🔴 5. Insight Generation (WEAK)
+### 4. High-Performance Glassmorphic UI
+- Developed a highly interactive dark-mode dashboard using **Vanilla CSS3** and **Vanilla JavaScript** (zero external frontend frameworks to minimize bundle size).
+- Engineered a responsive sidebar navigation system equipped with smooth bezier animations (`cubic-bezier(0.4, 0, 0.2, 1)`) and collapse state handling.
 
-You have:
+---
 
-✅ LLM explanation
+## 🛠️ System Architecture
 
-But missing:
+```mermaid
+graph TD
+    Query[User Query] --> Schema[Schema Agent]
+    Schema --> Parser[Query Planner Agent]
+    Parser --> Gen[Code Generator Agent]
+    Gen --> Post[AST/Regex Post-Processor]
+    Post --> Sandbox[Execution Sandbox]
+    Sandbox --> State[State Persistence & Snapshotting]
+    State --> Vis[Visualization Agent]
+    Vis --> Insight[Insight Agent]
+    Insight --> UI[Premium Dashboard Output]
+```
 
-❌ trend detection
-❌ anomaly detection
-❌ comparison logic
-❌ percentage changes
+---
 
-👉 Currently it's generic GPT text, not true analysis
+## 💻 Tech Stack
 
-🔴 6. Filtering & Drill-Down (MISSING)
+- **AI & LLM Network**: LangGraph, LangChain Core, HuggingFace Hub, Meta-Llama-3-8B-Instruct
+- **Backend & Database**: FastAPI, SQLAlchemy, PostgreSQL, Python-Dotenv
+- **Data Engineering**: Pandas, NumPy, Scikit-Learn
+- **Visualization**: Matplotlib, Seaborn
+- **Frontend**: HTML5, Vanilla CSS3 (Custom Variables, CSS Gradients, Bezier Transitions), ES6 JavaScript
 
-You don’t support:
+---
 
-❌ "sales in North region"
-❌ "data for 2024"
-❌ multi-condition filters
+## ⚙️ Setup & Execution
 
-👉 Your JSON has "filters" but:
+1. **Configure Environment**:
+   Initialize database credentials and Hugging Face endpoint token in `.env`.
 
-❌ Not implemented in code agent
+2. **Start Database**:
+   Verify PostgreSQL instance is active and databases are migrated.
 
-🔴 7. Conversational Memory (BIGGEST GAP)
-
-Right now:
-
-analyze_csv(...)  → stateless
-
-👉 Every query is independent
-
-Missing:
-❌ context memory
-❌ follow-up queries
-
-Example NOT supported:
-
-"Now compare with last year"
-"Break it by region"
-🔴 8. Report Generation (MISSING)
-
-You don’t have:
-
-❌ PDF export
-❌ CSV export
-❌ summary reports
+3. **Launch Server**:
+   Start the FastAPI development server:
+   ```bash
+   .\venv\Scripts\python.exe -m uvicorn server:app --host 127.0.0.1 --port 8000
+   ```
+   Open `http://127.0.0.1:8000` to interact with the application.

@@ -45,11 +45,6 @@ def visualization_agent(state):
         print("No data available to plot.")
         return {"error": "No data available to plot."}
 
-    # Ensure output dir exists
-    output_dir = "public"
-    os.makedirs(output_dir, exist_ok=True)
-    chart_path = os.path.join(output_dir, "chart.png")
-
     llm = get_llm()
     
     # Ensure columns list/index is extracted cleanly
@@ -60,8 +55,6 @@ def visualization_agent(state):
     else:
         cols_description = f"Series index: {list(df_to_plot.index)}"
         sample_dict = df_to_plot.head(5).to_dict()
-    
-    chart_path_str = chart_path.replace('\\', '/')
     
     # Generate prompt to write the plotting code
     prompt = f"""
@@ -77,9 +70,12 @@ def visualization_agent(state):
     
     STRICT RULES:
     1. Generate ONLY executable Python code. No markdown (like ```python or ```), no explanations.
-    2. The input dataframe is available as the variable `df_to_plot`. DO NOT redefine or load `df_to_plot` from a file.
-    3. Save the figure to '{chart_path_str}' using `plt.savefig('{chart_path_str}', bbox_inches='tight', dpi=300)`.
-    4. DO NOT call `plt.show()`.
+    2. The input dataframe is ALREADY loaded and available as the variable `df_to_plot` in the execution context.
+       - CRITICAL: DO NOT redefine `df_to_plot` (e.g., NEVER write `df_to_plot = pd.DataFrame(...)` or `df_to_plot = pd.read_csv(...)`).
+       - CRITICAL: DO NOT copy or paste any sample data from this prompt into your python code.
+       - Directly plot using the existing `df_to_plot` variable.
+    3. DO NOT use ellipsis (`...`) or placeholders. All code must be complete and valid Python.
+    4. DO NOT call `plt.savefig(...)` or `plt.show()`. The platform handles rendering automatically.
     5. Clean any existing plots before starting with `plt.close('all')`.
     6. Design styling rules to make it look premium:
        - Use a professional style/theme (e.g. `sns.set_theme(style="whitegrid")`).
@@ -106,16 +102,21 @@ def visualization_agent(state):
         }
         exec(code, {}, local_vars)
         
-        if os.path.exists(chart_path):
-            print(f"Chart successfully saved to {chart_path}")
-            return {
-                "chart_path": chart_path
-            }
-        else:
-            print("Chart file was not created by the generated code.")
-            return {
-                "error": "Chart generation code completed but file was not saved."
-            }
+        # Capture the current figure from plt to a BytesIO stream
+        import io
+        import base64
+        
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight', dpi=300)
+        buf.seek(0)
+        base64_data = base64.b64encode(buf.read()).decode('utf-8')
+        plt.close('all')
+        
+        chart_path = f"data:image/png;base64,{base64_data}"
+        print("Chart successfully generated in memory as Base64.")
+        return {
+            "chart_path": chart_path
+        }
             
     except Exception as e:
         print(f"Error in visualization agent: {str(e)}")

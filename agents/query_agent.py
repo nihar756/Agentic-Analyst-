@@ -58,10 +58,26 @@ def safe_json_load(llm, raw):
         fixed = llm.invoke(fix_prompt).content
         return json.loads(clean_json(fixed))
 
+def get_chat_history_str(conversation_id):
+    if not conversation_id:
+        return ""
+    try:
+        from database.crud import get_messages
+        msgs = get_messages(conversation_id)
+        history = []
+        for m in msgs[-10:]:
+            history.append(f"{m['role'].capitalize()}: {m['content']}")
+        return "\n".join(history)
+    except Exception as e:
+        print(f"Error loading chat history: {str(e)}")
+        return ""
+
 def query_agent(state):
     llm = get_llm()
 
     schema = state["schema"]
+    conversation_id = state.get("conversation_id")
+    history_str = get_chat_history_str(conversation_id)
 
     # ✅ Extract structured info
     numerical_cols = []
@@ -102,6 +118,9 @@ def query_agent(state):
     prompt = f"""
     Convert user query into STRICT JSON.
 
+    CONVERSATION HISTORY (Use this to resolve context for follow-up queries like 'Now what about average?'):
+    {history_str}
+
     IMPORTANT RULES:
     - Output ONLY valid JSON
     - DO NOT use $ref or $def or any other non-standard JSON constructs
@@ -113,9 +132,15 @@ def query_agent(state):
     Numerical columns: {numerical_cols}
     Categorical columns: {categorical_cols}
 
-    RULES FOR LOGIC:
-    IMPORTANT RULE:
+     RULES FOR LOGIC:
+    - DO NOT carry over filters, groupby, or aggregation from previous queries in the conversation history unless the current query is explicitly a follow-up query (e.g. "Now show the same for South region", "What about average?").
+    - If the user query is a completely new instruction/mutation (e.g., "update the price...", "delete rows..."), reset/ignore filters and aggregations from previous history.
+    - If the query is an update/delete mutation, task must be "update" (or other mutation tasks), and you must NOT add any groupby or aggregations.
     
+    IMPORTANT RULES:
+    - FILTER EXTRACTION: If the query mentions a specific value of a column (e.g. "for Electronics" or "of Electronics", "in North region", "for Laptop"), extract it as a filter (e.g. `{{"column": "category", "operation": "==", "value": "Electronics"}}`).
+    - TRENDS / OVER TIME: If the query asks for a "trend", "over time", "monthly/daily/weekly" change, the visualization x-axis MUST be mapped to the date column (e.g., `"x": "date"`), and the y-axis to the metric column (e.g., `"y": "revenue"`).
+    - DO NOT invent groupbys unless the user explicitly asks for grouping or partitioning (e.g. "per category", "by region", "grouped by product"). If the user asks "for Electronics", this is a FILTER, not a groupby!
     - aggregation is OPTIONAL
     - If query is only filtering or selecting → aggregation = []
     - Use aggregation ONLY on numerical columns
@@ -148,11 +173,12 @@ def query_agent(state):
     - descending → order = "desc"
     
     DATE RULES:
+    - "on YYYY-MM-DD" or "dated YYYY-MM-DD" or "on dated YYYY-MM-DD" → operator = "=="
     - "after YYYY-MM-DD" → operator = ">"
     - "before YYYY-MM-DD" → operator = "<"
     - "between X and Y" → two filters
     - "last N days" → dynamic filter (today - N)
-    - if the query has taxual date references like "january", "february", "last month", "last year" → try to convert to date filters
+    - if the query has textual date references like "january", "february", "last month", "last year" → try to convert to date filters
     
     SPECIAL TASKS:
     - If query asks about missing values → task = "missing_values"

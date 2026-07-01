@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AeroAnalyst AI - Premium Data Analyst</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/public/style.css?v=1.7.0">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fa-solid fa-chart-line-up logo-icon"></i>
+                    <span>AeroAnalyst AI</span>
+                </div>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="upload-section">
+                <label for="csv-upload" class="upload-btn">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Upload CSV</span>
+                </label>
+                <input type="file" id="csv-upload" accept=".csv" style="display: none;">
+            </div>
+
+            <!-- Datasets Section -->
+            <div class="sidebar-section">
+                <div class="section-title">
+                    <i class="fa-solid fa-database"></i> Datasets
+                </div>
+                <div class="dataset-list" id="dataset-list">
+                    <!-- Loaded dynamically -->
+                    <div class="empty-list-msg">No datasets uploaded</div>
+                </div>
+            </div>
+
+            <!-- Chat History Section -->
+            <div class="sidebar-section conversations-section">
+                <div class="section-title">
+                    <i class="fa-solid fa-message-captions"></i> Conversations
+                </div>
+                <div class="conversation-list" id="conversation-list">
+                    <!-- Loaded dynamically -->
+                    <div class="empty-list-msg">No conversations started</div>
+                </div>
+            </div>
+            <div class="sidebar-user-panel" id="sidebar-user-panel" style="margin-top: auto; padding: 12px 0; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                <div class="user-info" style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                    <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--accent-gradient); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; flex-shrink: 0;" id="user-avatar-initials">U</div>
+                    <div style="display: flex; flex-direction: column; min-width: 0;">
+                        <span id="user-display-name" style="font-size: 0.8rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Analyst</span>
+                        <span id="user-display-email" style="font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">user@example.com</span>
+                    </div>
+                </div>
+                <button id="logout-btn" title="Sign Out" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 6px; border-radius: 6px; transition: all 0.2s; flex-shrink: 0;">
+                    <i class="fa-solid fa-right-from-bracket" style="font-size: 0.9rem;"></i>
+                </button>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="version">v1.2.0-Alpha</div>
+                <div class="author"><i class="fa-brands fa-github"></i> ProjectX Data Lab</div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main class="main-workspace">
+            <!-- Header -->
+            <header class="workspace-header">
+                <div class="active-info">
+                    <button class="toggle-sidebar-btn" id="toggle-sidebar-btn" title="Toggle Sidebar">
+                        <i class="fa-solid fa-bars-staggered"></i>
+                    </button>
+                    <div id="active-dataset-display" class="header-badge dataset-badge" style="display: none;">
+                        <i class="fa-solid fa-table"></i> <span id="active-dataset-name">None</span>
+                    </div>
+                    <div id="active-conversation-title" class="header-title">Select a dataset to begin</div>
+                </div>
+                <div class="header-actions">
+                    <button class="action-btn" id="new-chat-btn" title="Start New Chat">
+                        <i class="fa-solid fa-plus"></i> New Chat
+                    </button>
+                </div>
+            </header>
+
+            <!-- Workspace Body (Split Pane Layout) -->
+            <div class="workspace-body">
+                <!-- Left: Chat Panel -->
+                <div class="chat-panel">
+                    <div class="chat-area">
+                        <!-- Welcome/Empty State -->
+                        <div class="welcome-screen" id="welcome-screen">
+                            <div class="welcome-card">
+                                <i class="fa-solid fa-wand-magic-sparkles welcome-icon"></i>
+                                <h1>AI Data Analysis Workspace</h1>
+                                <p>Upload a dataset, start a conversation, and ask natural language queries to modify data, calculate aggregates, and plot beautiful charts.</p>
+                                
+                                <div class="quick-tips">
+                                    <h3><i class="fa-solid fa-lightbulb"></i> Try queries like:</h3>
+                                    <ul>
+                                        <li><i class="fa-solid fa-circle-chevron-right"></i> "Show a summary of missing values"</li>
+                                        <li><i class="fa-solid fa-circle-chevron-right"></i> "Add a new row where product=Tablet, price=300"</li>
+                                        <li><i class="fa-solid fa-circle-chevron-right"></i> "Show a scatter plot of price vs sales"</li>
+                                        <li><i class="fa-solid fa-circle-chevron-right"></i> "Delete rows where category is empty"</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dataset Upload Dropzone (for empty chats) -->
+                        <div class="dataset-dropzone" id="dataset-dropzone" style="display: none;">
+                            <div class="dropzone-card">
+                                <i class="fa-solid fa-file-csv dropzone-icon"></i>
+                                <h2>Attach a Dataset</h2>
+                                <p>To start analyzing in this conversation, please upload a CSV file.</p>
+                                
+                                <label for="conv-csv-upload" class="dropzone-btn">
+                                    <i class="fa-solid fa-arrow-up-from-bracket"></i> Select CSV File
+                                </label>
+                                <input type="file" id="conv-csv-upload" accept=".csv" style="display: none;">
+                                
+                                <div class="or-divider"><span>OR</span></div>
+                                
+                                <div class="dataset-select-row">
+                                    <label for="existing-dataset-select">Link an existing dataset:</label>
+                                    <div class="select-group">
+                                        <select id="existing-dataset-select">
+                                            <option value="">-- Select --</option>
+                                        </select>
+                                        <button id="link-existing-btn" class="link-btn">Link</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Messages Log -->
+                        <div class="messages-log" id="messages-log" style="display: none;">
+                            <!-- Messages populated dynamically -->
+                        </div>
+
+                        <!-- Step-by-Step Progress Pipeline -->
+                        <div class="agent-pipeline" id="agent-pipeline" style="display: none;">
+                            <div class="pipeline-header">
+                                <div class="spinner"><i class="fa-solid fa-circle-notch fa-spin"></i></div>
+                                <span>AI Agent Network Analyzing Query...</span>
+                            </div>
+                            <div class="pipeline-steps">
+                                <div class="step" id="step-schema"><i class="fa-regular fa-circle"></i> Schema Parser</div>
+                                <div class="step" id="step-query"><i class="fa-regular fa-circle"></i> Query Planner</div>
+                                <div class="step" id="step-code"><i class="fa-regular fa-circle"></i> Code Generator</div>
+                                <div class="step" id="step-execute"><i class="fa-regular fa-circle"></i> Code Execution Sandbox</div>
+                                <div class="step" id="step-visualization"><i class="fa-regular fa-circle"></i> Visualization Agent</div>
+                                <div class="step" id="step-insight"><i class="fa-regular fa-circle"></i> Summary & Insights</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Controls -->
+                    <div class="input-area">
+                        <div class="input-wrapper">
+                            <textarea id="query-input" placeholder="Ask a question about your data..." rows="1" disabled></textarea>
+                            <button id="send-btn" disabled>
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="input-info">Press Enter to send. Powered by Llama-3 & LangGraph.</div>
+                    </div>
+                </div>
+
+                <!-- Right: Inspector Panel -->
+                <div class="inspector-panel" id="inspector-panel" style="display: none;">
+                    <div class="inspector-header">
+                        <div class="inspector-title">
+                            <i class="fa-solid fa-magnifying-glass-chart"></i>
+                            <span>Dataset Inspector</span>
+                        </div>
+                        <div class="inspector-actions">
+                            <span class="inspector-meta" id="inspector-meta-text">0 rows &times; 0 columns</span>
+                            <button class="download-btn-premium" id="download-dataset-btn" title="Download mutated dataset">
+                                <i class="fa-solid fa-cloud-arrow-down"></i>
+                                <span>Download</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="inspector-tabs">
+                        <button class="tab-btn active" data-tab="tab-preview">
+                            <i class="fa-solid fa-table"></i> Preview
+                        </button>
+                        <button class="tab-btn" data-tab="tab-schema">
+                            <i class="fa-solid fa-database"></i> Schema
+                        </button>
+                        <button class="tab-btn" data-tab="tab-stats">
+                            <i class="fa-solid fa-chart-bar"></i> Stats
+                        </button>
+                    </div>
+                    <div class="inspector-content">
+                        <!-- Preview Tab -->
+                        <div class="tab-content active" id="tab-preview">
+                            <div class="inspector-scroll-wrapper">
+                                <div id="inspector-table-container">
+                                    <div class="inspector-empty-state">No dataset loaded.</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Schema Tab -->
+                        <div class="tab-content" id="tab-schema">
+                            <div class="inspector-scroll-wrapper">
+                                <div id="inspector-schema-container">
+                                    <div class="inspector-empty-state">No dataset loaded.</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Stats Tab -->
+                        <div class="tab-content" id="tab-stats">
+                            <div class="inspector-scroll-wrapper">
+                                <div id="inspector-stats-container">
+                                    <div class="inspector-empty-state">No dataset loaded.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Image Modals / Image Zoom -->
+    <div class="image-modal" id="image-modal">
+        <span class="close-modal">&times;</span>
+        <img class="modal-content" id="modal-img">
+        <div id="modal-caption"></div>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="/public/app.js?v=1.5.0"></script>
+</body>
+</html>

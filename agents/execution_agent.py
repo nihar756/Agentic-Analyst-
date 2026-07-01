@@ -26,8 +26,27 @@ def execution_agent(state):
         result = local_vars.get("result", None)
         updated_df = local_vars.get("df", df)
         print(f"Execution result: {result}")
+        
+        # Check if this is a mutation operation
+        parsed = state.get("parsed_query", {})
+        query = state.get("query", "").lower()
+        mutation_keywords = ["add", "update", "delete", "remove", "fill", "drop", "change", "replace", "insert", "clean", "modify"]
+        is_mutation = False
+        
+        if parsed and isinstance(parsed, dict):
+            task = parsed.get("task", "")
+            if task in ["drop_nulls", "fill_nulls_mean", "fill_nulls_value", "drop_duplicates", "convert_type", "add_row", "delete_row", "update_cell", "drop_column"]:
+                is_mutation = True
+                
+        if any(kw in query for kw in mutation_keywords):
+            is_mutation = True
+
+        if is_mutation and isinstance(result, pd.DataFrame):
+            updated_df = result
+
         if isinstance(result, pd.DataFrame):
             state["df"] = result
+            
         return {
             "result": result,
             "error": None,

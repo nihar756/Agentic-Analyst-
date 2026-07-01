@@ -11,6 +11,7 @@ from agents.save_user_message_agent import save_user_message_agent
 from agents.save_query_agent import save_query_agent
 from agents.save_chart_agent import save_chart_agent
 from agents.save_assistant_agent import save_assistant_agent
+from agents.save_state_agent import save_state_agent
 import pandas as pd
 
 # from asyncio import graph
@@ -74,6 +75,11 @@ def build_graph():
     )
 
     graph.add_node(
+        "save_state",
+        save_state_agent
+    )
+
+    graph.add_node(
         "visualization",
         visualization_agent
     )
@@ -108,7 +114,8 @@ def build_graph():
     graph.add_edge("query","code")
     graph.add_edge("code","save_query")
     graph.add_edge("save_query","execute")
-    graph.add_edge("execute","visualization")
+    graph.add_edge("execute","save_state")
+    graph.add_edge("save_state","visualization")
     graph.add_edge("visualization","save_chart")
     graph.add_edge("save_chart","insight")
     graph.add_edge("insight","save_assistant")
