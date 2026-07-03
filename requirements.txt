@@ -1,35 +1,33 @@
-# LangChain Core
+# LangChain Core & Agents
 langchain
 langchain-core
-
-# OpenAI Integration
-# langchain-openai
-# openai
-
-# Anthropic Integration
-# langchain-anthropic
-
-# Google Gemini (PaLM) Integration
-# langchain-google-genai
-# google-generativeai
-
-# Hugging Face Integration
 langchain-huggingface
+langgraph
+langgraph-checkpoint
+langgraph-prebuilt
+
+# Hugging Face SDKs
 transformers
 huggingface-hub
 
-# Environment Variable Management
+# Database (SQLAlchemy + Neon Postgres client)
+sqlalchemy
+psycopg2-binary
+
+# API Server
+fastapi
+uvicorn
+python-multipart
+httpx
+orjson
 python-dotenv
 
-# Machine Learning Utilities
+# Storage (AWS/Supabase connection)
+boto3
+
+# Machine Learning & Data Wrangling
+pandas
 numpy
 scikit-learn
-
-# api integration
-pandas
-fastapi
-
-# Visualization
 matplotlib
 seaborn
-boto3
