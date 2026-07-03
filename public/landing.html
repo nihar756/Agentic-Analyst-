@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AeroAnalyst AI - Autonomous Data Analysis Platform</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-dark: #f8fafc;
+            --bg-card: #ffffff;
+            --border-color: rgba(0, 0, 0, 0.08);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --accent: #107c41;
+            --accent-gradient: linear-gradient(135deg, #107c41 0%, #217346 100%);
+            --accent-glow: rgba(16, 124, 65, 0.1);
+            --font-sans: 'Plus Jakarta Sans', sans-serif;
+            --font-display: 'Space Grotesk', sans-serif;
+            --shadow-premium: 0 15px 35px rgba(0, 0, 0, 0.05), 0 3px 10px rgba(0, 0, 0, 0.02);
+            --shadow-button: 0 4px 14px rgba(16, 124, 65, 0.25);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            font-family: var(--font-sans);
+            overflow-x: hidden;
+        }
+
+        /* Container styling */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Navbar Header */
+        header.navbar {
+            padding: 24px 0;
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header.navbar .nav-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            font-weight: 700;
+            text-decoration: none;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-icon {
+            font-size: 1.6rem;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .enter-btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .enter-btn-secondary:hover {
+            color: var(--text-primary);
+            background: rgba(0, 0, 0, 0.02);
+            border-color: rgba(0, 0, 0, 0.15);
+        }
+
+        /* Hero Section */
+        section.hero {
+            padding: 90px 0 60px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 16px;
+            background-color: rgba(16, 124, 65, 0.08);
+            border: 1px solid rgba(16, 124, 65, 0.2);
+            border-radius: 20px;
+            color: var(--accent);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 24px;
+            animation: fadeInDown 0.6s ease;
+        }
+
+        .hero h1 {
+            font-family: var(--font-display);
+            font-size: 3.25rem;
+            font-weight: 700;
+            line-height: 1.15;
+            letter-spacing: -1px;
+            max-width: 800px;
+            margin: 0 auto 20px auto;
+            color: var(--text-primary);
+            animation: fadeInUp 0.7s ease;
+        }
+
+        .hero h1 span {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p.lead {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            max-width: 650px;
+            margin: 0 auto 36px auto;
+            line-height: 1.6;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .cta-group {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 50px;
+            animation: fadeInUp 0.9s ease;
+        }
+
+        .enter-btn-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 30px;
+            border-radius: 10px;
+            background: var(--accent-gradient);
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            cursor: pointer;
+            box-shadow: var(--shadow-button);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .enter-btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(16, 124, 65, 0.4);
+        }
+
+        .enter-btn-primary:active {
+            transform: translateY(1px);
+        }
+
+        /* Floating Graphic Mock */
+        .workspace-preview {
+            max-width: 900px;
+            margin: 0 auto;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            background: white;
+            box-shadow: var(--shadow-premium);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            animation: scaleIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .mock-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .mock-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #cbd5e1;
+        }
+
+        .mock-dot.red { background: #f87171; }
+        .mock-dot.yellow { background: #fbbf24; }
+        .mock-dot.green { background: #34d399; }
+        
+        .mock-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-left: 8px;
+            font-weight: 500;
+        }
+
+        .mock-body {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 12px;
+            height: 280px;
+        }
+
+        .mock-chat {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: #f8fafc;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .mock-msg {
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            max-width: 90%;
+            margin-bottom: 8px;
+        }
+
+        .mock-msg.user {
+            background: rgba(16, 124, 65, 0.08);
+            border: 1px solid rgba(16, 124, 65, 0.2);
+            color: var(--text-primary);
+            align-self: flex-start;
+            font-weight: 500;
+        }
+
+        .mock-msg.ai {
+            background: white;
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            align-self: flex-start;
+        }
+
+        .mock-input {
+            height: 32px;
+            border: 1px solid var(--border-color);
+            background: white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        .mock-inspector {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background: white;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .mock-tabs {
+            display: flex;
+            gap: 6px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 6px;
+        }
+
+        .mock-tab {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: var(--text-muted);
+        }
+
+        .mock-tab.active {
+            background: rgba(16, 124, 65, 0.08);
+            color: var(--accent);
+        }
+
+        .mock-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.65rem;
+        }
+
+        .mock-table th, .mock-table td {
+            padding: 6px 8px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .mock-table th {
+            background: #f8fafc;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* Features Section */
+        section.features {
+            padding: 90px 0;
+            border-top: 1px solid var(--border-color);
+            background: white;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-header h2 {
+            font-family: var(--font-display);
+            font-size: 2.25rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 30px;
+        }
+
+        .feature-card {
+            padding: 32px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-dark);
+            transition: all 0.25s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(16, 124, 65, 0.3);
+            box-shadow: var(--shadow-premium);
+        }
+
+        .feature-icon-wrapper {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(16, 124, 65, 0.08);
+            border: 1px solid rgba(16, 124, 65, 0.2);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            margin-bottom: 20px;
+        }
+
+        .feature-card h3 {
+            font-family: var(--font-sans);
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .feature-card p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        footer {
+            padding: 40px 0;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--bg-dark);
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.96);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Profile Button & Dropdown Styles */
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .profile-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .profile-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            border-radius: 9999px;
+            border: 1px solid var(--border-color);
+            background: white;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.85rem;
+            font-family: var(--font-sans);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            user-select: none;
+        }
+
+        .profile-btn:hover {
+            border-color: rgba(16, 124, 65, 0.3);
+            background: rgba(16, 124, 65, 0.02);
+            box-shadow: 0 4px 12px rgba(16, 124, 65, 0.08);
+        }
+
+        .profile-btn .avatar-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        .profile-btn .dropdown-arrow {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            transition: transform 0.2s ease;
+        }
+
+        .profile-container.active .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .profile-dropdown {
+            position: absolute;
+            top: calc(100% + 12px);
+            right: 0;
+            width: 240px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            border-radius: 12px;
+            box-shadow: var(--shadow-premium);
+            padding: 8px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            transform: translateY(-10px) scale(0.95);
+            transform-origin: top right;
+            pointer-events: none;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .profile-dropdown.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            pointer-events: auto;
+        }
+
+        .dropdown-header {
+            padding: 12px 16px;
+            text-align: left;
+        }
+
+        .dropdown-header .user-name {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .dropdown-header .user-email {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background-color: var(--border-color);
+            margin: 6px 0;
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: var(--font-sans);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-decoration: none;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .dropdown-item:hover {
+            background: rgba(0, 0, 0, 0.03);
+            color: var(--text-primary);
+        }
+
+        .dropdown-item i {
+            font-size: 1rem;
+            color: var(--text-muted);
+            width: 16px;
+            text-align: center;
+        }
+
+        .dropdown-item:hover i {
+            color: var(--accent);
+        }
+
+        .dropdown-item.logout-item {
+            color: #dc2626;
+        }
+
+        .dropdown-item.logout-item:hover {
+            background: rgba(220, 38, 38, 0.06);
+            color: #b91c1c;
+        }
+
+        .dropdown-item.logout-item:hover i {
+            color: #b91c1c;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navbar -->
+    <header class="navbar">
+        <div class="container nav-flex">
+            <a href="/" class="logo">
+                <i class="fa-solid fa-chart-line-up logo-icon"></i>
+                <span>AeroAnalyst AI</span>
+            </a>
+            <div class="nav-actions">
+                <a href="/workspace" class="enter-btn-secondary" id="nav-workspace-btn">
+                    <span>Enter Workspace</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
+                <div class="profile-container" id="profile-container" style="display: none;">
+                    <button class="profile-btn" id="profile-btn">
+                        <div class="avatar-icon">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <span id="profile-username">User</span>
+                        <i class="fa-solid fa-chevron-down dropdown-arrow"></i>
+                    </button>
+                    <div class="profile-dropdown" id="profile-dropdown">
+                        <div class="dropdown-header">
+                            <div class="user-details">
+                                <p class="user-name" id="dropdown-user-name">User Name</p>
+                                <p class="user-email" id="dropdown-user-email">user@example.com</p>
+                            </div>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <a href="/workspace" class="dropdown-item">
+                            <i class="fa-solid fa-flask-vial"></i>
+                            <span>Analytics Lab</span>
+                        </a>
+                        <a href="/docs" target="_blank" class="dropdown-item">
+                            <i class="fa-solid fa-code"></i>
+                            <span>API Docs</span>
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <button onclick="handleLogout(event)" class="dropdown-item logout-item">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span>Log Out</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-badge">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Powered by LangGraph Agent Network</span>
+            </div>
+            <h1>Autonomous network of AI agents to <span>inspect, mutate, and analyze</span> your data</h1>
+            <p class="lead">Upload tabular datasets, query them in natural language, run safe sandbox executions, and download your modified results instantly.</p>
+            
+            <div class="cta-group">
+                <a href="/workspace" class="enter-btn-primary" id="hero-workspace-btn">
+                    <span>Enter Analytics Lab</span>
+                    <i class="fa-solid fa-flask-vial"></i>
+                </a>
+            </div>
+
+            <!-- Workspace Mock Preview -->
+            <div class="workspace-preview">
+                <div class="mock-header">
+                    <div class="mock-dot red"></div>
+                    <div class="mock-dot yellow"></div>
+                    <div class="mock-dot green"></div>
+                    <span class="mock-title">AeroAnalyst AI - Workspace Preview</span>
+                </div>
+                <div class="mock-body">
+                    <!-- Left: chat simulation -->
+                    <div class="mock-chat">
+                        <div>
+                            <div class="mock-msg user">
+                                "delete the row containing employee id EMP0001"
+                            </div>
+                            <div class="mock-msg ai">
+                                <strong>AeroAnalyst AI:</strong> Row containing EMP0001 was deleted successfully. The resulting dataset has 299 rows.
+                            </div>
+                        </div>
+                        <div class="mock-input">
+                            Ask a question about your data...
+                        </div>
+                    </div>
+                    <!-- Right: inspector simulation -->
+                    <div class="mock-inspector">
+                        <div class="mock-tabs">
+                            <span class="mock-tab active">Preview</span>
+                            <span class="mock-tab">Schema</span>
+                            <span class="mock-tab">Stats</span>
+                        </div>
+                        <table class="mock-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>employee_id</th>
+                                    <th>department</th>
+                                    <th>city</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>EMP0002</td>
+                                    <td>Sales</td>
+                                    <td>Pune</td>
+                                </tr>
+                                <tr>
+                                    <td>2</td>
+                                    <td>EMP0003</td>
+                                    <td>Sales</td>
+                                    <td>Delhi</td>
+                                </tr>
+                                <tr>
+                                    <td>3</td>
+                                    <td>EMP0004</td>
+                                    <td>Marketing</td>
+                                    <td>Chennai</td>
+                                </tr>
+                                <tr>
+                                    <td>4</td>
+                                    <td>EMP0005</td>
+                                    <td>Support</td>
+                                    <td>Pune</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Grid Section -->
+    <section class="features">
+        <div class="container">
+            <div class="section-header">
+                <h2>Product Highlights</h2>
+                <p>Designed for analytical precision, safe computations, and seamless data visualization.</p>
+            </div>
+            
+            <div class="features-grid">
+                <!-- Feature 1 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper">
+                        <i class="fa-solid fa-diagram-project"></i>
+                    </div>
+                    <h3>Multi-Agent Orchestration</h3>
+                    <p>Orchestrates query decomposition using LangGraph: Schema Parser, Query Planner, Code Generator, Execution Sandbox, and Insight agents work in parallel.</p>
+                </div>
+                
+                <!-- Feature 2 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper">
+                        <i class="fa-solid fa-code-commit"></i>
+                    </div>
+                    <h3>Self-Correcting Sandbox</h3>
+                    <p>Python code is generated and run inside a secure AST-processed sandbox. Real-time syntax and attribute post-processing ensure execution never crashes.</p>
+                </div>
+                
+                <!-- Feature 3 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper">
+                        <i class="fa-solid fa-copy"></i>
+                    </div>
+                    <h3>Stateful Mutation Isolations</h3>
+                    <p>Mutate datasets safely. Conversations duplicate and snapshot files, making additions, cell updates, and deletions non-destructive to your original data.</p>
+                </div>
+                
+                <!-- Feature 4 -->
+                <div class="feature-card">
+                    <div class="feature-icon-wrapper">
+                        <i class="fa-solid fa-file-excel"></i>
+                    </div>
+                    <h3>Excel-Compatible Inspector</h3>
+                    <p>Explore datasets in real-time. View clean light-theme data grids, inspect column datatypes, count missing values, and review summary statistics at a glance.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 AeroAnalyst AI. Powered by ProjectX Data Lab. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Check auth status on load
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/auth/status');
+                const data = await response.json();
+                
+                const navBtn = document.getElementById('nav-workspace-btn');
+                const heroBtn = document.getElementById('hero-workspace-btn');
+                const profileContainer = document.getElementById('profile-container');
+                
+                if (data.authenticated) {
+                    navBtn.href = '/workspace';
+                    navBtn.innerHTML = `<span>Enter Workspace</span> <i class="fa-solid fa-arrow-right"></i>`;
+                    heroBtn.href = '/workspace';
+                    heroBtn.innerHTML = `<span>Enter Analytics Lab</span> <i class="fa-solid fa-flask-vial"></i>`;
+                    
+                    if (profileContainer) {
+                        profileContainer.style.display = 'inline-block';
+                        const userName = data.user.name || 'User';
+                        const userEmail = data.user.email || '';
+                        
+                        document.getElementById('profile-username').textContent = userName.split(' ')[0];
+                        document.getElementById('dropdown-user-name').textContent = userName;
+                        document.getElementById('dropdown-user-email').textContent = userEmail;
+                    }
+                } else {
+                    navBtn.href = '/public/auth.html';
+                    navBtn.innerHTML = `<span>Sign In</span> <i class="fa-solid fa-right-to-bracket"></i>`;
+                    heroBtn.href = '/public/auth.html';
+                    heroBtn.innerHTML = `<span>Get Started Free</span> <i class="fa-solid fa-user-plus"></i>`;
+                    
+                    if (profileContainer) {
+                        profileContainer.style.display = 'none';
+                    }
+                }
+            } catch (err) {
+                console.error("Auth check failed:", err);
+            }
+        }
+
+        // Toggle profile dropdown
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            
+            const profileBtn = document.getElementById('profile-btn');
+            const profileDropdown = document.getElementById('profile-dropdown');
+            const profileContainer = document.getElementById('profile-container');
+            
+            if (profileBtn && profileDropdown && profileContainer) {
+                profileBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    profileDropdown.classList.toggle('show');
+                    profileContainer.classList.toggle('active');
+                });
+                
+                // Close when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!profileContainer.contains(e.target)) {
+                        profileDropdown.classList.remove('show');
+                        profileContainer.classList.remove('active');
+                    }
+                });
+            }
+        });
+
+        // Logout handler
+        async function handleLogout(e) {
+            if (e) e.preventDefault();
+            try {
+                const response = await fetch('/api/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    console.error("Logout failed:", data.detail);
+                }
+            } catch (err) {
+                console.error("Logout error:", err);
+            }
+        }
+    </script>
+
+</body>
+</html>
