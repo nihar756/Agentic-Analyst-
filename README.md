@@ -1,3 +1,13 @@
+---
+title: AeroAnalyst AI
+emoji: 📈
+colorFrom: indigo
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # AeroAnalyst AI
 
 ### LangGraph-Powered Multi-Agent Data Analysis Platform
