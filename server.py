@@ -124,7 +124,8 @@ def api_login(payload: LoginPayload, response: Response):
         value=token,
         httponly=True,
         max_age=7 * 24 * 60 * 60,
-        samesite="lax",
+        samesite="none",
+        secure=True,
         path="/"
     )
     return {"status": "success", "user": user_data}
@@ -138,7 +139,12 @@ def api_logout(response: Response, session_token: Optional[str] = Cookie(None)):
     delete_session(db, session_token)
     db.close()
     
-    response.delete_cookie(key="session_token", path="/")
+    response.delete_cookie(
+        key="session_token",
+        path="/",
+        samesite="none",
+        secure=True
+    )
     return {"status": "success", "message": "Logged out successfully"}
 
 @app.get("/api/auth/status")
