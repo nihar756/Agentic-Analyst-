@@ -32,3 +32,4 @@ fastapi
 # Visualization
 matplotlib
 seaborn
+boto3

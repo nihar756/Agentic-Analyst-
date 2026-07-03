@@ -177,27 +177,40 @@ async def api_upload_dataset(file: UploadFile = File(...), user = Depends(get_ac
     if not file.filename.endswith('.csv'):
         raise HTTPException(status_code=400, detail="Only CSV files are allowed")
     
-    # Save file to public/
     filename = file.filename
     unique_prefix = uuid.uuid4().hex[:8]
     saved_filename = f"{unique_prefix}_{filename}"
-    filepath = os.path.join("public", saved_filename).replace('\\', '/')
     
-    try:
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        
-        # Save to database
-        dataset_id = save_dataset(filename=filename, filepath=filepath, user_id=user.id)
-        return {
-            "id": dataset_id,
-            "filename": filename,
-            "filepath": filepath
-        }
-    except Exception as e:
-        if os.path.exists(filepath):
-            os.remove(filepath)
-        raise HTTPException(status_code=500, detail=str(e))
+    from utils.s3_helper import get_s3_client, upload_to_s3
+    s3_client = get_s3_client()
+    
+    if s3_client:
+        s3_key = f"uploads/{saved_filename}"
+        try:
+            upload_to_s3(file.file, s3_key)
+            dataset_id = save_dataset(filename=filename, filepath=s3_key, user_id=user.id)
+            return {
+                "id": dataset_id,
+                "filename": filename,
+                "filepath": s3_key
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"R2 Upload failed: {str(e)}")
+    else:
+        filepath = os.path.join("public", saved_filename).replace('\\', '/')
+        try:
+            with open(filepath, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            dataset_id = save_dataset(filename=filename, filepath=filepath, user_id=user.id)
+            return {
+                "id": dataset_id,
+                "filename": filename,
+                "filepath": filepath
+            }
+        except Exception as e:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            raise HTTPException(status_code=500, detail=str(e))
 
 @app.put("/api/datasets/{id}")
 def api_rename_dataset(id: int, payload: RenameDatasetPayload, user = Depends(get_active_user)):
@@ -216,8 +229,14 @@ def api_rename_dataset(id: int, payload: RenameDatasetPayload, user = Depends(ge
 def api_delete_dataset(id: int, user = Depends(get_active_user)):
     try:
         filepath = delete_dataset(id, user_id=user.id)
-        if filepath and os.path.exists(filepath):
-            os.remove(filepath)
+        if filepath:
+            from utils.s3_helper import get_s3_client, delete_s3_object
+            s3_client = get_s3_client()
+            if s3_client and not filepath.startswith("public/"):
+                delete_s3_object(filepath)
+            else:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
         return {"status": "success", "message": "Dataset deleted"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -226,13 +245,32 @@ def api_delete_dataset(id: int, user = Depends(get_active_user)):
 def api_download_dataset(id: int, user = Depends(get_active_user)):
     try:
         dataset = get_dataset(id, user_id=user.id)
-        if not dataset or not os.path.exists(dataset["filepath"]):
-            raise HTTPException(status_code=404, detail="Dataset file not found")
-        return FileResponse(
-            path=dataset["filepath"],
-            filename=dataset["filename"],
-            media_type="text/csv"
-        )
+        if not dataset:
+            raise HTTPException(status_code=404, detail="Dataset not found")
+            
+        filepath = dataset["filepath"]
+        from utils.s3_helper import get_s3_client, download_from_s3
+        s3_client = get_s3_client()
+        
+        if s3_client and not filepath.startswith("public/"):
+            try:
+                buffer = download_from_s3(filepath)
+                from fastapi.responses import StreamingResponse
+                return StreamingResponse(
+                    buffer,
+                    media_type="text/csv",
+                    headers={"Content-Disposition": f"attachment; filename={dataset['filename']}"}
+                )
+            except Exception as e:
+                raise HTTPException(status_code=404, detail=f"Failed to download from R2: {str(e)}")
+        else:
+            if not os.path.exists(filepath):
+                raise HTTPException(status_code=404, detail="Dataset file not found locally")
+            return FileResponse(
+                path=filepath,
+                filename=dataset["filename"],
+                media_type="text/csv"
+            )
     except HTTPException:
         raise
     except Exception as e:
@@ -288,13 +326,24 @@ def api_download_conversation_dataset(id: int, user = Depends(get_active_user)):
             raise HTTPException(status_code=404, detail="Conversation not found")
             
         file_path = conv.filepath
-        if not file_path or not os.path.exists(file_path):
+        
+        from utils.s3_helper import get_s3_client, download_from_s3
+        s3_client = get_s3_client()
+        
+        def file_exists(path):
+            if not path:
+                return False
+            if s3_client and not path.startswith("public/"):
+                return True
+            return os.path.exists(path)
+            
+        if not file_exists(file_path):
             if conv.dataset_id:
                 dataset = get_dataset(conv.dataset_id, user_id=user.id)
-                if dataset and os.path.exists(dataset["filepath"]):
+                if dataset and file_exists(dataset["filepath"]):
                     file_path = dataset["filepath"]
                     
-        if not file_path or not os.path.exists(file_path):
+        if not file_exists(file_path):
             db.close()
             raise HTTPException(status_code=404, detail="Dataset file not found")
             
@@ -308,14 +357,35 @@ def api_download_conversation_dataset(id: int, user = Depends(get_active_user)):
                 clean_filename = parts[3]
             else:
                 clean_filename = filename[len("conv_"):]
+        elif "/" in file_path and file_path.startswith("mutations/"):
+            filename_part = file_path.split("/")[-1]
+            parts = filename_part.split("_", 3)
+            if len(parts) >= 4:
+                clean_filename = parts[3]
+            else:
+                clean_filename = filename_part
         
         download_name = f"mutated_{clean_filename}"
         
-        return FileResponse(
-            path=file_path,
-            filename=download_name,
-            media_type="text/csv"
-        )
+        if s3_client and not file_path.startswith("public/"):
+            try:
+                buffer = download_from_s3(file_path)
+                from fastapi.responses import StreamingResponse
+                return StreamingResponse(
+                    buffer,
+                    media_type="text/csv",
+                    headers={"Content-Disposition": f"attachment; filename={download_name}"}
+                )
+            except Exception as e:
+                raise HTTPException(status_code=404, detail=f"Failed to download from R2: {str(e)}")
+        else:
+            if not os.path.exists(file_path):
+                raise HTTPException(status_code=404, detail="Dataset file not found locally")
+            return FileResponse(
+                path=file_path,
+                filename=download_name,
+                media_type="text/csv"
+            )
     except HTTPException:
         raise
     except Exception as e:
@@ -372,27 +442,39 @@ async def api_upload_dataset_for_conv(id: int, file: UploadFile = File(...), use
     filename = file.filename
     unique_prefix = uuid.uuid4().hex[:8]
     saved_filename = f"{unique_prefix}_{filename}"
-    filepath = os.path.join("public", saved_filename).replace('\\', '/')
     
-    try:
-        with open(filepath, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-        
-        # Save to database
-        dataset_id = save_dataset(filename=filename, filepath=filepath, user_id=user.id)
-        
-        # Link to conversation
-        link_dataset_to_conversation(id, dataset_id)
-        
-        return {
-            "id": dataset_id,
-            "filename": filename,
-            "filepath": filepath
-        }
-    except Exception as e:
-        if os.path.exists(filepath):
-            os.remove(filepath)
-        raise HTTPException(status_code=500, detail=str(e))
+    from utils.s3_helper import get_s3_client, upload_to_s3
+    s3_client = get_s3_client()
+    
+    if s3_client:
+        s3_key = f"uploads/{saved_filename}"
+        try:
+            upload_to_s3(file.file, s3_key)
+            dataset_id = save_dataset(filename=filename, filepath=s3_key, user_id=user.id)
+            link_dataset_to_conversation(id, dataset_id)
+            return {
+                "id": dataset_id,
+                "filename": filename,
+                "filepath": s3_key
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"R2 Upload failed: {str(e)}")
+    else:
+        filepath = os.path.join("public", saved_filename).replace('\\', '/')
+        try:
+            with open(filepath, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            dataset_id = save_dataset(filename=filename, filepath=filepath, user_id=user.id)
+            link_dataset_to_conversation(id, dataset_id)
+            return {
+                "id": dataset_id,
+                "filename": filename,
+                "filepath": filepath
+            }
+        except Exception as e:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            raise HTTPException(status_code=500, detail=str(e))
 
 def make_json_serializable(val):
     import numpy as np
@@ -469,20 +551,39 @@ def api_get_conversation_preview(id: int, user = Depends(get_active_user)):
             raise HTTPException(status_code=404, detail="Conversation not found")
         
         file_path = conv.filepath
-        if not file_path or not os.path.exists(file_path):
+        
+        from utils.s3_helper import get_s3_client, read_dataframe_from_s3
+        s3_client = get_s3_client()
+        
+        def file_exists(path):
+            if not path:
+                return False
+            if s3_client and not path.startswith("public/"):
+                return True
+            return os.path.exists(path)
+            
+        if not file_exists(file_path):
             if conv.dataset_id:
                 dataset = get_dataset(conv.dataset_id, user_id=user.id)
-                if dataset and os.path.exists(dataset["filepath"]):
+                if dataset and file_exists(dataset["filepath"]):
                     file_path = dataset["filepath"]
             
-        if not file_path or not os.path.exists(file_path):
+        if not file_exists(file_path):
             db.close()
             return {"status": "empty", "message": "No dataset linked or file missing"}
             
         db.close()
 
         # Load dataframe
-        df = pd.read_csv(file_path)
+        if s3_client and not file_path.startswith("public/"):
+            try:
+                df = read_dataframe_from_s3(file_path)
+            except Exception as e:
+                return {"status": "error", "message": f"Failed to load dataset from R2: {str(e)}"}
+        else:
+            if not os.path.exists(file_path):
+                return {"status": "empty", "message": "No dataset linked or file missing"}
+            df = pd.read_csv(file_path)
         
         # Limit rows for preview (first 100 rows)
         preview_rows = df.head(100)
@@ -542,10 +643,21 @@ def api_run_query(id: int, payload: QueryPayload, user = Depends(get_active_user
         
         # Determine the file path (use local conversation file if it exists)
         file_path = conv.get("filepath")
-        if not file_path or not os.path.exists(file_path):
+        
+        from utils.s3_helper import get_s3_client
+        s3_client = get_s3_client()
+        
+        def file_exists(path):
+            if not path:
+                return False
+            if s3_client and not path.startswith("public/"):
+                return True
+            return os.path.exists(path)
+
+        if not file_exists(file_path):
             dataset_id = conv["dataset_id"]
             dataset = get_dataset(dataset_id, user_id=user.id)
-            if not dataset or not os.path.exists(dataset["filepath"]):
+            if not dataset or not file_exists(dataset["filepath"]):
                 raise HTTPException(status_code=400, detail="Associated dataset not found")
             file_path = dataset["filepath"]
         else:

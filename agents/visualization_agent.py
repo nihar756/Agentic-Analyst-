@@ -1,19 +1,13 @@
 import pandas as pd
 import json
 import os
-import re
 import sys
-import matplotlib
-matplotlib.use('Agg') # Non-interactive backend
-import matplotlib.pyplot as plt
-import seaborn as sns
 
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 from utils.llm import get_llm
-from agents.code_agent import clean_code
 
 def visualization_agent(state):
     query = state.get("query", "").lower()
@@ -51,69 +45,111 @@ def visualization_agent(state):
     cols_description = ""
     if isinstance(df_to_plot, pd.DataFrame):
         cols_description = f"Columns: {list(df_to_plot.columns)}"
-        sample_dict = df_to_plot.head(5).to_dict()
+        sample_dict = df_to_plot.head(5).to_dict(orient="records")
     else:
         cols_description = f"Series index: {list(df_to_plot.index)}"
         sample_dict = df_to_plot.head(5).to_dict()
     
-    # Generate prompt to write the plotting code
     prompt = f"""
-    Generate Python code using matplotlib and seaborn to create a beautiful chart.
+    You are a data visualization assistant. Determine the best chart configuration for this dataset based on the user's query.
     
-    The user query is: "{state['query']}"
-    The parsed query visualization config is: {json.dumps(vis_details)}
+    User Query: "{state['query']}"
+    Parsed Config: {json.dumps(vis_details)}
     
     Data info to plot (stored in variable `df_to_plot`):
     - {cols_description}
     - Sample/Head of data:
     {sample_dict}
     
-    STRICT RULES:
-    1. Generate ONLY executable Python code. No markdown (like ```python or ```), no explanations.
-    2. The input dataframe is ALREADY loaded and available as the variable `df_to_plot` in the execution context.
-       - CRITICAL: DO NOT redefine `df_to_plot` (e.g., NEVER write `df_to_plot = pd.DataFrame(...)` or `df_to_plot = pd.read_csv(...)`).
-       - CRITICAL: DO NOT copy or paste any sample data from this prompt into your python code.
-       - Directly plot using the existing `df_to_plot` variable.
-    3. DO NOT use ellipsis (`...`) or placeholders. All code must be complete and valid Python.
-    4. DO NOT call `plt.savefig(...)` or `plt.show()`. The platform handles rendering automatically.
-    5. Clean any existing plots before starting with `plt.close('all')`.
-    6. Design styling rules to make it look premium:
-       - Use a professional style/theme (e.g. `sns.set_theme(style="whitegrid")`).
-       - CRITICAL: Do not blindly use `config['x']` and `config['y']`. You MUST map them to the exact column names present in the `df_to_plot` Columns list (e.g., if config says 'total_revenue' but column is 'revenue', use 'revenue').
-       - If using `df_to_plot.plot(kind=...)`, ensure the kind is valid (e.g., 'bar' instead of 'bar chart'). Alternatively, use seaborn directly (e.g. `sns.barplot(data=df_to_plot, x='actual_x_col', y='actual_y_col')`).
-       - Use a curated color palette (like "muted", "viridis", "coolwarm", or professional colors).
-       - Rotate x-axis labels if they are categorical or dates and might overlap (e.g., `plt.xticks(rotation=45)`).
-       - Add clear title, xlabel, and ylabel.
-       - Use `plt.tight_layout()`.
-    7. Only output the Python code. Stop after writing it.
+    Choose:
+    1. Chart Type: "bar", "line", "pie", "doughnut", "radar", "polarArea" (standard Chart.js types).
+    2. X-axis Column: Must be a column name from the list above.
+    3. Y-axis Column: Must be a column name from the list above.
+    4. Chart Title: A concise, descriptive title.
+    
+    Output ONLY a JSON block like this:
+    {{
+      "type": "bar",
+      "x": "column_name",
+      "y": "column_name",
+      "title": "Chart Title"
+    }}
+    Do not output any markdown or explanation.
     """
     
     try:
         response = llm.invoke(prompt)
-        code = clean_code(response.content)
-        print(f"Generated visualization code:\n{code}")
+        content = response.content.strip()
         
-        # Execute the generated code
-        local_vars = {
-            "df_to_plot": df_to_plot,
-            "plt": plt,
-            "sns": sns,
-            "pd": pd
+        # Clean any markdown packaging (e.g. ```json ... ```)
+        if content.startswith("```"):
+            lines = content.split("\n")
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines[-1].startswith("```"):
+                lines = lines[:-1]
+            content = "\n".join(lines).strip()
+            
+        config = json.loads(content)
+        
+        # Convert df_to_plot to DataFrame if it's a Series
+        if isinstance(df_to_plot, pd.Series):
+            name = df_to_plot.name or 'value'
+            df = df_to_plot.reset_index()
+            df.columns = ['index', name]
+            x_col = 'index'
+            y_col = name
+        else:
+            df = df_to_plot
+            x_col = config.get("x")
+            y_col = config.get("y")
+            
+        # Fallback/validation: make sure x_col and y_col exist in df
+        if x_col not in df.columns:
+            x_col = df.columns[0]
+        if y_col not in df.columns:
+            y_col = df.columns[1] if len(df.columns) > 1 else df.columns[0]
+            
+        # Extract data rows limit to head(50) for performance
+        data_records = df[[x_col, y_col]].head(50).to_dict(orient="records")
+        
+        # Convert data types for JSON compatibility
+        import numpy as np
+        import datetime
+        def clean_val(v):
+            if v is None:
+                return None
+            if isinstance(v, float):
+                if np.isnan(v) or np.isinf(v):
+                    return None
+            if isinstance(v, (np.integer, np.int64, np.int32, np.int16, np.int8)):
+                return int(v)
+            if isinstance(v, (np.floating, np.float64, np.float32, np.float16)):
+                return float(v)
+            if isinstance(v, np.bool_):
+                return bool(v)
+            if isinstance(v, (datetime.date, datetime.datetime)):
+                return v.isoformat()
+            return v
+
+        cleaned_records = []
+        for row in data_records:
+            cleaned_row = {}
+            for k, val in row.items():
+                cleaned_row[k] = clean_val(val)
+            cleaned_records.append(cleaned_row)
+
+        # Build specification
+        chart_spec = {
+            "type": config.get("type", "bar"),
+            "x": x_col,
+            "y": y_col,
+            "title": config.get("title", "Data Visualization"),
+            "data": cleaned_records
         }
-        exec(code, {}, local_vars)
         
-        # Capture the current figure from plt to a BytesIO stream
-        import io
-        import base64
-        
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png', bbox_inches='tight', dpi=300)
-        buf.seek(0)
-        base64_data = base64.b64encode(buf.read()).decode('utf-8')
-        plt.close('all')
-        
-        chart_path = f"data:image/png;base64,{base64_data}"
-        print("Chart successfully generated in memory as Base64.")
+        chart_path = json.dumps(chart_spec)
+        print("Chart specification successfully generated.")
         return {
             "chart_path": chart_path
         }

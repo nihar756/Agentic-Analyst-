@@ -695,29 +695,205 @@ function appendMessage(role, text, result = null, chartPath = null) {
     
     // Append Plot if chartPath exists
     if (chartPath) {
-        const chartBlock = document.createElement('div');
-        chartBlock.className = 'chart-wrapper';
-        
-        let imgSrc = '';
-        if (chartPath.startsWith('data:')) {
-            imgSrc = chartPath;
-        } else {
-            const cacheBuster = `?t=${new Date().getTime()}`;
-            const relativeChartPath = chartPath.replace(/\\/g, '/');
-            imgSrc = `/${relativeChartPath}${cacheBuster}`;
+        let isJsonSpec = false;
+        let spec = null;
+        try {
+            if (typeof chartPath === 'string' && (chartPath.trim().startsWith('{') || chartPath.trim().startsWith('['))) {
+                spec = JSON.parse(chartPath);
+                isJsonSpec = true;
+            } else if (typeof chartPath === 'object' && chartPath !== null) {
+                spec = chartPath;
+                isJsonSpec = true;
+            }
+        } catch (e) {
+            console.warn("Failed to parse chart spec, rendering as image:", e);
         }
-        
-        chartBlock.innerHTML = `
-            <img src="${imgSrc}" alt="Data Visualization">
-            <div class="chart-overlay"><i class="fa-solid fa-magnifying-glass-plus"></i> Click to Zoom</div>
-        `;
-        
-        // Zoom Handler
-        chartBlock.addEventListener('click', () => {
-            zoomImage(imgSrc, text);
-        });
-        
-        attachments.appendChild(chartBlock);
+
+        if (isJsonSpec && spec && spec.data) {
+            const chartBlock = document.createElement('div');
+            chartBlock.className = 'chart-wrapper interactive-chart';
+            chartBlock.style.position = 'relative';
+            chartBlock.style.width = '100%';
+            chartBlock.style.height = '320px';
+            chartBlock.style.background = '#ffffff';
+            chartBlock.style.borderRadius = '12px';
+            chartBlock.style.padding = '16px';
+            chartBlock.style.border = '1px solid var(--border-color)';
+            chartBlock.style.boxSizing = 'border-box';
+            chartBlock.style.marginTop = '12px';
+
+            const canvas = document.createElement('canvas');
+            
+            // Create download button
+            const downloadBtn = document.createElement('button');
+            downloadBtn.className = 'chart-download-btn';
+            downloadBtn.title = 'Download Chart Image';
+            downloadBtn.style.position = 'absolute';
+            downloadBtn.style.top = '12px';
+            downloadBtn.style.right = '12px';
+            downloadBtn.style.background = 'rgba(255,255,255,0.9)';
+            downloadBtn.style.border = '1px solid var(--border-color)';
+            downloadBtn.style.color = '#475569';
+            downloadBtn.style.cursor = 'pointer';
+            downloadBtn.style.padding = '6px 10px';
+            downloadBtn.style.borderRadius = '6px';
+            downloadBtn.style.transition = 'all 0.15s ease';
+            downloadBtn.style.zIndex = '10';
+            downloadBtn.style.display = 'flex';
+            downloadBtn.style.alignItems = 'center';
+            downloadBtn.style.gap = '6px';
+            downloadBtn.style.fontFamily = 'Plus Jakarta Sans';
+            downloadBtn.style.fontSize = '0.75rem';
+            downloadBtn.style.fontWeight = '600';
+            downloadBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
+            downloadBtn.innerHTML = `<i class="fa-solid fa-download"></i> <span>Download</span>`;
+
+            downloadBtn.addEventListener('mouseenter', () => {
+                downloadBtn.style.background = 'var(--accent-gradient)';
+                downloadBtn.style.color = '#ffffff';
+                downloadBtn.style.borderColor = 'transparent';
+            });
+            downloadBtn.addEventListener('mouseleave', () => {
+                downloadBtn.style.background = 'rgba(255,255,255,0.9)';
+                downloadBtn.style.color = '#475569';
+                downloadBtn.style.borderColor = 'var(--border-color)';
+            });
+
+            downloadBtn.addEventListener('click', () => {
+                try {
+                    const link = document.createElement('a');
+                    link.download = `${spec.title || 'chart'}.png`;
+                    
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = canvas.width;
+                    tempCanvas.height = canvas.height;
+                    const ctx = tempCanvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                    ctx.drawImage(canvas, 0, 0);
+                    
+                    link.href = tempCanvas.toDataURL('image/png');
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                } catch (err) {
+                    console.error("Failed to download chart image:", err);
+                }
+            });
+
+            chartBlock.appendChild(downloadBtn);
+            chartBlock.appendChild(canvas);
+            attachments.appendChild(chartBlock);
+
+            try {
+                // Prepare Chart.js data
+                const labels = spec.data.map(item => item[spec.x]);
+                const values = spec.data.map(item => item[spec.y]);
+
+                // Create nice colors
+                const baseColor = 'rgba(16, 124, 65, 0.7)';
+                const borderColor = 'rgba(16, 124, 65, 1)';
+                
+                let backgroundColors = baseColor;
+                let borderColors = borderColor;
+                if (['pie', 'doughnut', 'polarArea'].includes(spec.type)) {
+                    backgroundColors = spec.data.map((_, i) => {
+                        const hue = (i * (360 / Math.max(1, spec.data.length))) % 360;
+                        return `hsla(${hue}, 65%, 45%, 0.7)`;
+                    });
+                    borderColors = spec.data.map((_, i) => {
+                        const hue = (i * (360 / Math.max(1, spec.data.length))) % 360;
+                        return `hsla(${hue}, 65%, 45%, 1)`;
+                    });
+                }
+
+                new Chart(canvas, {
+                    type: spec.type || 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: spec.y || 'Value',
+                            data: values,
+                            backgroundColor: backgroundColors,
+                            borderColor: borderColors,
+                            borderWidth: 1.5,
+                            borderRadius: spec.type === 'bar' ? 6 : 0,
+                            hoverBackgroundColor: 'rgba(16, 124, 65, 0.95)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: ['pie', 'doughnut', 'polarArea'].includes(spec.type),
+                                position: 'bottom',
+                                labels: {
+                                    font: { family: 'Plus Jakarta Sans', size: 11 },
+                                    color: '#475569'
+                                }
+                            },
+                            title: {
+                                display: !!spec.title,
+                                text: spec.title,
+                                font: { family: 'Space Grotesk', size: 14, weight: 'bold' },
+                                color: '#0f172a',
+                                padding: { bottom: 12 }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                titleFont: { family: 'Plus Jakarta Sans', weight: 'bold' },
+                                bodyFont: { family: 'Plus Jakarta Sans' },
+                                padding: 10,
+                                cornerRadius: 8
+                            }
+                        },
+                        scales: ['pie', 'doughnut', 'polarArea', 'radar'].includes(spec.type) ? {} : {
+                            x: {
+                                grid: { display: false },
+                                ticks: {
+                                    font: { family: 'Plus Jakarta Sans', size: 10 },
+                                    color: '#64748b'
+                                }
+                            },
+                            y: {
+                                grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                                ticks: {
+                                    font: { family: 'Plus Jakarta Sans', size: 10 },
+                                    color: '#64748b'
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error("Error creating Chart.js chart:", err);
+                chartBlock.innerHTML = `<div style="color: #dc2626; padding: 16px;">Failed to render interactive chart: ${err.message}</div>`;
+            }
+        } else {
+            const chartBlock = document.createElement('div');
+            chartBlock.className = 'chart-wrapper';
+            
+            let imgSrc = '';
+            if (chartPath.startsWith('data:')) {
+                imgSrc = chartPath;
+            } else {
+                const cacheBuster = `?t=${new Date().getTime()}`;
+                const relativeChartPath = chartPath.replace(/\\/g, '/');
+                imgSrc = `/${relativeChartPath}${cacheBuster}`;
+            }
+            
+            chartBlock.innerHTML = `
+                <img src="${imgSrc}" alt="Data Visualization">
+                <div class="chart-overlay"><i class="fa-solid fa-magnifying-glass-plus"></i> Click to Zoom</div>
+            `;
+            
+            chartBlock.addEventListener('click', () => {
+                zoomImage(imgSrc, text);
+            });
+            
+            attachments.appendChild(chartBlock);
+        }
     }
     
     messagesLog.appendChild(msg);

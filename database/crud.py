@@ -129,12 +129,21 @@ def delete_conversation(conversation_id, user_id=None):
         query = query.filter(Conversation.user_id == user_id)
     conv = query.first()
     if conv:
-        # Delete local copy of the dataset if it exists
-        if conv.filepath and os.path.exists(conv.filepath):
-            try:
-                os.remove(conv.filepath)
-            except Exception as e:
-                print(f"Error removing conversation file {conv.filepath}: {str(e)}")
+        # Delete local/R2 copy of the dataset if it exists
+        if conv.filepath:
+            from utils.s3_helper import get_s3_client, delete_s3_object
+            s3_client = get_s3_client()
+            if s3_client and not conv.filepath.startswith("public/"):
+                try:
+                    delete_s3_object(conv.filepath)
+                except Exception as e:
+                    print(f"Error removing R2 conversation file {conv.filepath}: {str(e)}")
+            else:
+                if os.path.exists(conv.filepath):
+                    try:
+                        os.remove(conv.filepath)
+                    except Exception as e:
+                        print(f"Error removing local conversation file {conv.filepath}: {str(e)}")
         
         # Delete chart files associated with the conversation
         charts = db.query(Chart).filter(Chart.conversation_id == conversation_id).all()
@@ -199,14 +208,24 @@ def link_dataset_to_conversation(conversation_id, dataset_id):
         if dataset:
             src_filepath = dataset.filepath
             filename = os.path.basename(src_filepath)
-            dest_filename = f"conv_{conversation_id}_{filename}"
-            dest_filepath = os.path.join("public", dest_filename).replace('\\', '/')
             
-            try:
-                shutil.copy2(src_filepath, dest_filepath)
-                conv.filepath = dest_filepath
-            except Exception as e:
-                print(f"Error copying dataset for conversation: {str(e)}")
+            from utils.s3_helper import get_s3_client, copy_s3_object
+            s3_client = get_s3_client()
+            if s3_client and not src_filepath.startswith("public/"):
+                dest_filepath = f"mutations/conv_{conversation_id}_{filename}"
+                try:
+                    copy_s3_object(src_filepath, dest_filepath)
+                    conv.filepath = dest_filepath
+                except Exception as e:
+                    print(f"Error copying R2 object for conversation: {str(e)}")
+            else:
+                dest_filename = f"conv_{conversation_id}_{filename}"
+                dest_filepath = os.path.join("public", dest_filename).replace('\\', '/')
+                try:
+                    shutil.copy2(src_filepath, dest_filepath)
+                    conv.filepath = dest_filepath
+                except Exception as e:
+                    print(f"Error copying local dataset for conversation: {str(e)}")
                 
             if conv.title == "New Analysis" or conv.title == "New Chat" or conv.title.startswith("Chat on"):
                 base_title = f"Chat on {dataset.filename}"

@@ -4,3 +4,4 @@ __pycache__/
 .env
 public/*.csv
 public/chart*.png
+scratch/
