@@ -4,8 +4,8 @@ import os
 
 load_dotenv()
 llm= HuggingFaceEndpoint(
-    repo_id="meta-llama/Meta-Llama-3-8B-Instruct",
-    # repo_id='mistralai/Mistral-7B-Instruct-v0.2',
+    repo_id="meta-llama/Llama-3.1-8B-Instruct",
+    # repo_id='Qwen/Qwen2.5-Coder-7B-Instruct',
     task="chat-completion",
     huggingfacehub_api_token=os.getenv("HUGGINGFACEHUB_ACCESS_TOKEN")
 )
